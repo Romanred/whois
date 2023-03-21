@@ -24,7 +24,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.zip.GZIPOutputStream;
 
 import static net.ripe.db.nrtm4.util.NrtmFileUtil.calculateSha256;
@@ -106,7 +109,8 @@ public class SnapshotFileGenerator {
 
     List<NrtmVersionInfo> createSnapshotsForVersions(final SnapshotState state, final List<NrtmVersionInfo> snapshotVersions) {
         final Stopwatch stopwatch = Stopwatch.createStarted();
-        final List<Thread> queueReaders = new ArrayList<>();
+        final ExecutorService taskExecutor = Executors.newFixedThreadPool(snapshotVersions.size());
+
         final Map<CIString, LinkedBlockingQueue<RpslObjectData>> queueMap = new HashMap<>();
         for (final NrtmVersionInfo snapshotVersion : snapshotVersions) {
             LOGGER.info("Creating snapshot for {}", snapshotVersion.source().getName());
@@ -114,24 +118,35 @@ public class SnapshotFileGenerator {
             final LinkedBlockingQueue<RpslObjectData> queue = new LinkedBlockingQueue<>(QUEUE_CAPACITY);
             queueMap.put(snapshotFile.getSource().getName(), queue);
             final RunnableFileGenerator runner = new RunnableFileGenerator(dummifierNrtm, snapshotFileRepository, snapshotFileSerializer, snapshotVersion, queue);
-            final Thread queueReader = new Thread(runner);
-            queueReader.setName(snapshotFile.getSource().getName().toString());
-            queueReaders.add(queueReader);
-            queueReader.start();
+            taskExecutor.execute(runner);
         }
         new Thread(rpslObjectEnqueuer.getRunner(state, queueMap)).start();
-        for (final Thread queueReader : queueReaders) {
-            try {
-                queueReader.join();
-            } catch (final InterruptedException e) {
-                LOGGER.warn("Queue reader (JSON file writer) interrupted", e);
-                Thread.currentThread().interrupt();
-            } catch (final Throwable t) {
-                LOGGER.info("Queue reader (JSON file writer) threw unexpected exception", t);
-            }
+
+        shutdownAndAwaitTermination(taskExecutor);
+        try {
+            taskExecutor.awaitTermination(3, TimeUnit.HOURS);
+        } catch (InterruptedException e) {
+            taskExecutor.shutdownNow();
+            Thread.currentThread().interrupt();
         }
+
         LOGGER.info("Snapshot generation complete {}", stopwatch);
         return snapshotVersions;
+    }
+
+    void shutdownAndAwaitTermination(final ExecutorService executorService) {
+        executorService.shutdown();
+        try {
+            if (!executorService.awaitTermination(2, TimeUnit.HOURS)) {
+                LOGGER.error("executor did not terminate");
+                executorService.shutdownNow();
+            }
+        } catch (InterruptedException ie) {
+            LOGGER.error("executor did not terminate");
+
+            executorService.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
     }
 
     private record RunnableFileGenerator(
