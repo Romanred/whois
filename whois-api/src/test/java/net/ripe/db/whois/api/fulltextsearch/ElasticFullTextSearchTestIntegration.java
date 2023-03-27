@@ -129,6 +129,25 @@ public class ElasticFullTextSearchTestIntegration  extends AbstractElasticSearch
     }
 
     @Test
+    public void search_single_result_encoded() {
+        databaseHelper.addObject(RpslObject.parse(
+                "mntner: DEV-MNT\n" +
+                        "source: RIPE"));
+        rebuildIndex();
+
+        final QueryResponse queryResponse = query("q=DEV%2DMNT");
+
+        assertThat(queryResponse.getStatus(), is(0));
+        assertThat(queryResponse.getResults().getNumFound(), is(1L));
+        assertThat(queryResponse.getResults(), hasSize(1));
+        final SolrDocument solrDocument = queryResponse.getResults().get(0);
+        assertThat(solrDocument.getFirstValue("primary-key"), is("1"));
+        assertThat(solrDocument.getFirstValue("object-type"), is("mntner"));
+        assertThat(solrDocument.getFirstValue("lookup-key"), is("DEV-MNT"));
+        assertThat(solrDocument.getFirstValue("mntner"), is("DEV-MNT"));
+    }
+
+    @Test
     public void search_single_result_object_deleted_before_index_updated() {
         final RpslObject mntner = RpslObject.parse(
                 "mntner: DEV-MNT\n" +
@@ -608,6 +627,19 @@ public class ElasticFullTextSearchTestIntegration  extends AbstractElasticSearch
                 "descr: some description\n" +
                 "source: TEST"));
          rebuildIndex();
+
+        assertThat(numFound(query("q=2a00%5C%3A1f78%5C%3A%5C%3Afffe%2F48")), is(1L));
+        assertThat(numFound(query("q=212.166.64.0%2F19")), is(0L));
+    }
+
+    @Test
+    public void search_with_forward_slash_encoded() {
+        databaseHelper.addObject(RpslObject.parse(
+                "inet6num: 2a001f78%3A%3Afffe%2F48\n" +
+                        "netname: RIPE-NCC\n" +
+                        "descr: some description\n" +
+                        "source: TEST"));
+        rebuildIndex();
 
         assertThat(numFound(query("q=2a00%5C%3A1f78%5C%3A%5C%3Afffe%2F48")), is(1L));
         assertThat(numFound(query("q=212.166.64.0%2F19")), is(0L));
