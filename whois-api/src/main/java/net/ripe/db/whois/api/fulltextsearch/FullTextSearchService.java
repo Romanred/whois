@@ -46,6 +46,7 @@ public class FullTextSearchService {
             @QueryParam("facet") @DefaultValue("false") final String facet,
             @Context final HttpServletRequest request) {
         try {
+            LOGGER.info("doing fulltext search for query {}-{} ---  {}", writerType, query, getEscapedQuery(writerType,query));
             return ok(search(
                     new SearchRequest.SearchRequestBuilder()
                             .setRows(rows)
