@@ -12,6 +12,7 @@ import net.ripe.db.whois.common.rpsl.RpslObject;
 import net.ripe.db.whois.common.source.Source;
 import net.ripe.db.whois.common.source.SourceContext;
 import net.ripe.db.whois.query.acl.AccessControlListManager;
+import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.lucene.queryparser.classic.QueryParser;
 import org.elasticsearch.client.RequestOptions;
@@ -161,7 +162,7 @@ public class ElasticFulltextSearch extends FulltextSearch {
 
     private QueryStringQueryBuilder getQueryBuilder(final String query) {
         LOGGER.info("Querying for fulltext phrase {}, {} ", query, QueryParser.escape(query));
-        return QueryBuilders.queryStringQuery(QueryParser.escape(query)).type(MultiMatchQueryBuilder.Type.PHRASE_PREFIX);
+        return QueryBuilders.queryStringQuery(getEscapedQuery(query)).type(MultiMatchQueryBuilder.Type.PHRASE_PREFIX);
     }
 
     private SearchResponse.Lst createHighlights(final SearchHit hit) {
@@ -236,5 +237,8 @@ public class ElasticFulltextSearch extends FulltextSearch {
 
         result.setDocs(resultDocumentList);
         return result;
+    }
+    private String getEscapedQuery(final String query) {
+      return StringUtils.isBlank(query) || !query.equals(StringEscapeUtils.unescapeJava(query)) ? query :  QueryParser.escape(query);
     }
 }
