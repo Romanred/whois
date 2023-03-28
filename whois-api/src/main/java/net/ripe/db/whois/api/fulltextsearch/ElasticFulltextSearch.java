@@ -13,6 +13,7 @@ import net.ripe.db.whois.common.source.Source;
 import net.ripe.db.whois.common.source.SourceContext;
 import net.ripe.db.whois.query.acl.AccessControlListManager;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.lucene.queryparser.classic.QueryParser;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.index.query.MultiMatchQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
@@ -159,7 +160,8 @@ public class ElasticFulltextSearch extends FulltextSearch {
     }
 
     private QueryStringQueryBuilder getQueryBuilder(final String query) {
-        return QueryBuilders.queryStringQuery(escape(query)).type(MultiMatchQueryBuilder.Type.PHRASE_PREFIX);
+        LOGGER.info("Querying for fulltext phrase {}, {} ", query, QueryParser.escape(query));
+        return QueryBuilders.queryStringQuery(QueryParser.escape(query)).type(MultiMatchQueryBuilder.Type.PHRASE_PREFIX);
     }
 
     private SearchResponse.Lst createHighlights(final SearchHit hit) {
