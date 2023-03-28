@@ -2,6 +2,8 @@ package net.ripe.db.whois.api.fulltextsearch;
 
 import net.ripe.db.whois.api.rest.RestServiceHelper;
 import net.ripe.db.whois.query.domain.QueryException;
+import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,7 +50,7 @@ public class FullTextSearchService {
                     new SearchRequest.SearchRequestBuilder()
                             .setRows(rows)
                             .setStart(start)
-                            .setQuery(query)
+                            .setQuery(getEscapedQuery(writerType, query))
                             .setHighlight(highlight)
                             .setHighlightPre(highlightPre)
                             .setHighlightPost(highlightPost)
@@ -87,4 +89,12 @@ public class FullTextSearchService {
             throw new IllegalStateException(e);
         }
     }
+
+    private String getEscapedQuery(final String format, final String query) {
+        if(StringUtils.isBlank(query) || !SearchRequest.XML_FORMAT.equals(format)) {
+            return query;
+        }
+        return query.equals(StringEscapeUtils.unescapeJava(query))? StringEscapeUtils.escapeJava(query):  query;
+    }
+
 }
