@@ -3,8 +3,8 @@ package net.ripe.db.whois.update.sso;
 import net.ripe.db.whois.common.rpsl.RpslAttribute;
 import net.ripe.db.whois.common.rpsl.RpslObject;
 import net.ripe.db.whois.common.sso.AuthServiceClient;
-import net.ripe.db.whois.common.sso.AuthTranslator;
 import net.ripe.db.whois.common.sso.AuthServiceClientException;
+import net.ripe.db.whois.common.sso.AuthTranslator;
 import net.ripe.db.whois.common.sso.SsoHelper;
 import net.ripe.db.whois.update.domain.Update;
 import net.ripe.db.whois.update.domain.UpdateContext;
@@ -20,6 +20,7 @@ import javax.annotation.CheckForNull;
 public class SsoTranslator {
     private final AuthServiceClient authServiceClient;
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(SsoTranslator.class);
     @Autowired
     public SsoTranslator(final AuthServiceClient authServiceClient) {
         this.authServiceClient = authServiceClient;
@@ -53,12 +54,14 @@ public class SsoTranslator {
             @Override
             @CheckForNull
             public RpslAttribute translate(final String authType, final String authToken, final RpslAttribute originalAttribute) {
+                LOGGER.info("translate " + authToken);
                 if (authType.equals("SSO")) {
                     if (!updateContext.hasSsoTranslationResult(authToken)) {
                         try {
                             final String uuid = authServiceClient.getUuid(authToken);
                             updateContext.addSsoTranslationResult(authToken, uuid);
                         } catch (AuthServiceClientException e) {
+                            LOGGER.info("translate error " + e);
                             updateContext.addMessage(update, originalAttribute, UpdateMessages.ripeAccessAccountUnavailable(authToken));
                         }
                     }

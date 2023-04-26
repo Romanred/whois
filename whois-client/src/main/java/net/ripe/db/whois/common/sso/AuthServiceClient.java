@@ -111,7 +111,7 @@ public class AuthServiceClient {
     @Cacheable(cacheNames="ssoUuid", key="#username")
     public String getUuid(final String username) {
         if (StringUtils.isEmpty(username)) {
-            LOGGER.debug("No username was supplied");
+            LOGGER.info("No username was supplied");
             throw new AuthServiceClientException(BAD_REQUEST.getStatusCode(), "Invalid username.");
         }
 
@@ -126,13 +126,13 @@ public class AuthServiceClient {
             return response.response.content.id;
 
         } catch (NotFoundException e) {
-            LOGGER.debug("Failed to get info {} due to {}:{}\n\tResponse: {}", username, e.getClass().getName(), e.getMessage(), e.getResponse().readEntity(String.class));
+            LOGGER.info("Failed to get info {} due to {}:{}\n\tResponse: {}", username, e.getClass().getName(), e.getMessage(), e.getResponse().readEntity(String.class));
             throw new AuthServiceClientException(UNAUTHORIZED.getStatusCode(), "Invalid username.");
         } catch (WebApplicationException e) {
-            LOGGER.debug("Failed to get details for email {} due to {}:{}\n\tResponse: {}", username, e.getClass().getName(), e.getMessage(), e.getResponse().readEntity(String.class));
+            LOGGER.info("Failed to get details for email {} due to {}:{}\n\tResponse: {}", username, e.getClass().getName(), e.getMessage(), e.getResponse().readEntity(String.class));
             throw new AuthServiceClientException(INTERNAL_SERVER_ERROR.getStatusCode(), "Internal server error");
         } catch (ProcessingException e) {
-            LOGGER.debug("Failed to get details for email {} due to {}:{}", username, e.getClass().getName(), e.getMessage());
+            LOGGER.info("Failed to get details for email {} due to {}:{}", username, e.getClass().getName(), e.getMessage());
             throw new AuthServiceClientException(INTERNAL_SERVER_ERROR.getStatusCode(), "Internal server error");
         }
     }
