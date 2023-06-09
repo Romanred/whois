@@ -10,6 +10,7 @@ import net.ripe.db.whois.common.rpsl.AttributeType;
 import net.ripe.db.whois.common.rpsl.ObjectTemplate;
 import net.ripe.db.whois.common.rpsl.ObjectType;
 import net.ripe.db.whois.common.rpsl.RpslAttribute;
+import net.ripe.db.whois.common.rpsl.RpslObject;
 import net.ripe.db.whois.common.source.Source;
 import net.ripe.db.whois.common.source.SourceContext;
 import net.ripe.db.whois.query.acl.AccessControlListManager;
@@ -121,12 +122,16 @@ public class ElasticFulltextSearch extends FulltextSearch {
                     final SearchResponse.Result.Doc resultDocument = new SearchResponse.Result.Doc();
                     highlightDocs.add(createHighlights(hit));
 
-                    // Try to get the abusemailbox attributes for account instead passing a list
-                    final List<RpslAttribute> abuseMailBoxAttributes = Lists.newArrayList();
                     final ObjectType objectType = ObjectType.getByName(hit.getSourceAsMap().get(FullTextIndex.OBJECT_TYPE_FIELD_NAME).toString());
-                    resultDocument.setStrs(getAttributes(hit, abuseMailBoxAttributes, objectType));
+                    final RpslObject rpslObject = getRpsl(hit, objectType);
 
-                    account(objectType, abuseMailBoxAttributes);
+                    final List<SearchResponse.Str> attributes = Lists.newArrayList();
+                    attributes.add(new SearchResponse.Str(FullTextIndex.OBJECT_TYPE_FIELD_NAME, objectType.getName()));
+                    attributes.add(new SearchResponse.Str(FullTextIndex.LOOKUP_KEY_FIELD_NAME, hit.getSourceAsMap().get(FullTextIndex.LOOKUP_KEY_FIELD_NAME).toString()));
+                    attributes.addAll(rpslObject.getAttributes().stream().map(attribute -> new SearchResponse.Str(attribute.getKey(), attribute.getValue())).toList());
+                    resultDocument.setStrs(attributes);
+
+                    account(rpslObject);
                     resultDocumentList.add(resultDocument);
                 }
                 return prepareResponse(fulltextResponse, highlightDocs, resultDocumentList, searchRequest, stopwatch);
@@ -134,7 +139,10 @@ public class ElasticFulltextSearch extends FulltextSearch {
         }.search();
     }
 
-    private SearchResponse prepareResponse(org.elasticsearch.action.search.SearchResponse fulltextResponse, List<SearchResponse.Lst> highlightDocs, List<SearchResponse.Result.Doc> resultDocumentList, SearchRequest searchRequest, Stopwatch stopwatch) {
+    private SearchResponse prepareResponse(final org.elasticsearch.action.search.SearchResponse fulltextResponse,
+                                           final List<SearchResponse.Lst> highlightDocs,
+                                           final List<SearchResponse.Result.Doc> resultDocumentList,
+                                           final SearchRequest searchRequest, final Stopwatch stopwatch) {
         final SearchResponse.Result result = new SearchResponse.Result("response", Long.valueOf(fulltextResponse.getHits().getTotalHits().value).intValue(), searchRequest.getStart());
         result.setDocs(resultDocumentList);
 
@@ -162,23 +170,12 @@ public class ElasticFulltextSearch extends FulltextSearch {
         return searchResponse;
     }
 
-    private List<SearchResponse.Str> getAttributes(final SearchHit hit,
-                                                   final List<RpslAttribute> abuseMailBoxAttributes,
-                                                   final ObjectType objectType) {
-        final List<SearchResponse.Str> attributes = Lists.newArrayList();
-        attributes.add(new SearchResponse.Str(FullTextIndex.OBJECT_TYPE_FIELD_NAME, objectType.getName()));
-        attributes.add(new SearchResponse.Str(FullTextIndex.LOOKUP_KEY_FIELD_NAME, hit.getSourceAsMap().get(FullTextIndex.LOOKUP_KEY_FIELD_NAME).toString()));
-
+    private RpslObject getRpsl(final SearchHit hit, final ObjectType objectType) {
         final Set<AttributeType> templateAttributes = ObjectTemplate.getTemplate(objectType).getAllAttributes();
 
-
-        for (final RpslAttribute rpslAttribute : filterRpslAttributes(templateAttributes, hit.getSourceAsMap())) {
-            if(rpslAttribute.getType().equals(AttributeType.ABUSE_MAILBOX)){
-                abuseMailBoxAttributes.add(rpslAttribute);
-            }
-            attributes.add(new SearchResponse.Str(rpslAttribute.getKey(), rpslAttribute.getValue()));
-        }
-        return attributes;
+        List<RpslAttribute> rpslAttributes = Lists.newArrayList();
+        rpslAttributes.addAll(filterRpslAttributes(templateAttributes, hit.getSourceAsMap()));
+        return new RpslObject(rpslAttributes);
     }
 
     private List<RpslAttribute> filterRpslAttributes(final Set<AttributeType> attributeTypes, final Map<String, Object> hitAttributes) {
