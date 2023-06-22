@@ -28,8 +28,6 @@ import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.Socket;
-import java.net.SocketException;
-import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 
 import static org.hamcrest.CoreMatchers.is;
@@ -79,7 +77,7 @@ public class WhoisProxyProtocolTestIntegration extends AbstractQueryIntegrationT
     }
 
     @Test
-    public void test_ipv6_client_ip() throws UnknownHostException {
+    public void test_ipv6_client_ip() throws IOException {
         InetAddress clientIp = InetAddress.getByName("ee80:aa00:bb00:cc00::");
 
         send(clientIp, "ADM-TEST");
