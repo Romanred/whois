@@ -100,16 +100,17 @@ public class TelnetWhoisClient {
 
     @RetryFor(IOException.class)
     private Optional<String> sendQueryWithRetry(final String query, final Function<BufferedReader, Optional<String>> function, final Charset charset, final int timeoutMs) throws IOException {
-
-        try (final Socket socket = new Socket(host, port);
-             final PrintWriter serverWriter = new PrintWriter(socket.getOutputStream(), true);
-             final BufferedReader serverReader = new BufferedReader(new InputStreamReader(socket.getInputStream(), charset))) {
-
-            if (timeoutMs >= 0) socket.setSoTimeout(timeoutMs);
-
-            serverWriter.print(query + "\r\n");
-            serverWriter.flush();
-            return function.apply(serverReader);
+        try (final Socket socket = new Socket(host, port)) {
+            // if (timeoutMs >= 0) socket.setSoTimeout(timeoutMs);
+            socket.setSoTimeout(5000);
+            socket.setTcpNoDelay(true);
+            socket.setReuseAddress(true);
+            try (final PrintWriter serverWriter = new PrintWriter(socket.getOutputStream(), true);
+                    final BufferedReader serverReader = new BufferedReader(new InputStreamReader(socket.getInputStream(), charset))) {
+                serverWriter.print(query + "\r\n");
+                serverWriter.flush();
+                return function.apply(serverReader);
+            }
         }
     }
 

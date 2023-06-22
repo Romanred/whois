@@ -28,6 +28,7 @@ import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 
@@ -70,7 +71,7 @@ public class WhoisProxyProtocolTestIntegration extends AbstractQueryIntegrationT
     }
 
     @Test
-    public void test_ipv4_client_ip() throws UnknownHostException {
+    public void test_ipv4_client_ip() throws IOException {
         InetAddress clientIp = InetAddress.getByName("12.34.56.78");
 
         send(clientIp, "ADM-TEST");
@@ -85,18 +86,20 @@ public class WhoisProxyProtocolTestIntegration extends AbstractQueryIntegrationT
         assertThat(testPersonalObjectAccounting.getQueriedPersonalObjects(clientIp), is(1));
     }
 
-    private String send(final InetAddress clientIp, final String query) {
-        try (final Socket socket = new Socket("localhost", QueryServer.port);
-             final OutputStream out = socket.getOutputStream();
-             final InputStream in = socket.getInputStream()) {
-
-            out.write(createProxyProtocolHeader(clientIp));
-            out.write((query + "\r\n").getBytes(StandardCharsets.ISO_8859_1));
-            out.flush();
-
-            return IOUtils.toString(new InputStreamReader(in, StandardCharsets.ISO_8859_1));
-        } catch (IOException ioe) {
-            throw new RuntimeException(ioe);
+    private String send(final InetAddress clientIp, final String query) throws IOException {
+        try (final Socket socket = new Socket("localhost", QueryServer.port)) {
+            socket.setSoTimeout(5000);
+            socket.setTcpNoDelay(true);
+            socket.setReuseAddress(true);
+            try (final OutputStream out = socket.getOutputStream();
+                    final InputStream in = socket.getInputStream()) {
+                out.write(createProxyProtocolHeader(clientIp));
+                out.write((query + "\r\n").getBytes(StandardCharsets.ISO_8859_1));
+                out.flush();
+                return IOUtils.toString(new InputStreamReader(in, StandardCharsets.ISO_8859_1));
+            } catch (IOException ioe) {
+                throw new RuntimeException(ioe);
+            }
         }
     }
 
