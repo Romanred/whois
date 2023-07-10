@@ -1393,17 +1393,12 @@ public class WhoisRdapServiceTestIntegration extends AbstractRdapIntegrationTest
         final List<Entity> entities = autnum.getEntitySearchResults();
         assertThat(entities, hasSize(4));
 
-        assertThat(entities.get(0).getHandle(), is("ORG-TO2-TEST"));
-        assertThat(entities.get(0).getRoles(), contains(Role.REGISTRANT));
-        assertThat(entities.get(1).getHandle(), is("OWNER-MNT"));
-        assertThat(entities.get(1).getRoles(), contains(Role.REGISTRANT));
-        assertThat(entities.get(2).getHandle(), is("TP1-TEST"));
-        assertThat(entities.get(2).getRoles(), containsInAnyOrder(Role.ADMINISTRATIVE, Role.TECHNICAL));
-        assertThat(entities.get(3).getHandle(), is("AB-TEST"));
-        assertThat(entities.get(3).getRoles(), contains(Role.ABUSE));
-        assertThat(entities.get(3).getVCardArray(), hasSize(2));
-        assertThat(entities.get(3).getVCardArray().get(0).toString(), is("vcard"));
-        assertThat(entities.get(3).getVCardArray().get(1).toString(), is("" +
+
+        assertThat(entities.get(0).getHandle(), is("AB-TEST"));
+        assertThat(entities.get(0).getRoles(), contains(Role.ABUSE));
+        assertThat(entities.get(0).getVCardArray(), hasSize(2));
+        assertThat(entities.get(0).getVCardArray().get(0).toString(), is("vcard"));
+        assertThat(entities.get(0).getVCardArray().get(1).toString(), is("" +
                 "[[version, {}, text, 4.0], " +
                 "[fn, {}, text, Abuse Contact], " +
                 "[kind, {}, text, group], " +
@@ -1412,6 +1407,14 @@ public class WhoisRdapServiceTestIntegration extends AbstractRdapIntegrationTest
                 "[email, {type=email}, text, work@test.com], " +
                 "[email, {type=email}, text, personal@test.com], " +
                 "[email, {type=abuse}, text, abuse@test.net]]"));
+
+
+        assertThat(entities.get(1).getHandle(), is("OWNER-MNT"));
+        assertThat(entities.get(1).getRoles(), contains(Role.REGISTRANT));
+        assertThat(entities.get(2).getHandle(), is("TP1-TEST"));
+        assertThat(entities.get(2).getRoles(), containsInAnyOrder(Role.ADMINISTRATIVE, Role.TECHNICAL));
+        assertThat(entities.get(3).getHandle(), is("ORG-TO2-TEST"));
+        assertThat(entities.get(3).getRoles(), contains(Role.REGISTRANT));
     }
 
     @Test
@@ -1672,26 +1675,26 @@ public class WhoisRdapServiceTestIntegration extends AbstractRdapIntegrationTest
         final List<Entity> entities = ip.getEntitySearchResults();
         assertThat(entities, hasSize(4));
 
-        assertThat(entities.get(0).getHandle(), is("ORG-TO2-TEST"));
-        assertThat(entities.get(0).getRoles().get(0), is(Role.REGISTRANT));
-
-        assertThat(entities.get(2).getHandle(), is("TP1-TEST"));
-        assertThat(entities.get(2).getRoles(), contains(Role.TECHNICAL));
-
-        assertThat(entities.get(1).getHandle(), is("OWNER-MNT"));
-        assertThat(entities.get(1).getRoles().get(0), is(Role.REGISTRANT));
-
-        assertThat(entities.get(3).getHandle(), is("AB-TEST"));
-        assertThat(entities.get(3).getRoles(), contains(Role.ABUSE));
-        assertThat(entities.get(3).getVCardArray(), hasSize(2));
-        assertThat(entities.get(3).getVCardArray().get(0).toString(), is("vcard"));
-        assertThat(entities.get(3).getVCardArray().get(1).toString(), is("" +
+        assertThat(entities.get(0).getHandle(), is("AB-TEST"));
+        assertThat(entities.get(0).getRoles(), contains(Role.ABUSE));
+        assertThat(entities.get(0).getVCardArray(), hasSize(2));
+        assertThat(entities.get(0).getVCardArray().get(0).toString(), is("vcard"));
+        assertThat(entities.get(0).getVCardArray().get(1).toString(), is("" +
                 "[[version, {}, text, 4.0], " +
                 "[fn, {}, text, Abuse Contact], " +
                 "[kind, {}, text, group], " +
                 "[adr, {label=Singel 258}, text, [, , , , , , ]], " +
                 "[tel, {type=voice}, text, +31 6 12345678], " +
                 "[email, {type=abuse}, text, abuse@test.net]]"));
+
+        assertThat(entities.get(1).getHandle(), is("OWNER-MNT"));
+        assertThat(entities.get(1).getRoles().get(0), is(Role.REGISTRANT));
+
+        assertThat(entities.get(2).getHandle(), is("TP1-TEST"));
+        assertThat(entities.get(2).getRoles(), contains(Role.TECHNICAL));
+
+        assertThat(entities.get(3).getHandle(), is("ORG-TO2-TEST"));
+        assertThat(entities.get(3).getRoles().get(0), is(Role.REGISTRANT));
     }
 
     // organisation entity

@@ -135,7 +135,7 @@ class RdapObjectMapper {
     public Object map(final String requestUrl,
                       final RpslObject rpslObject,
                       @Nullable final AbuseContact abuseContact) {
-        return mapCommons(getRdapObject(requestUrl, rpslObject, abuseContact), requestUrl);
+        return mapCommons(getRdapObject(requestUrl, rpslObject, abuseContact), requestUrl, List.of(rpslObject));
     }
 
     public Object mapSearch(final String requestUrl, final List<RpslObject> objects, final int maxResultSize) {
@@ -153,7 +153,7 @@ class RdapObjectMapper {
             notice.setTitle(String.format("limited search results to %s maximum" , maxResultSize));
             searchResult.getNotices().add(notice);
         }
-        return mapCommons(searchResult, requestUrl);
+        return mapCommons(searchResult, requestUrl, objects);
     }
 
     public Object mapDomainEntity(
@@ -194,14 +194,14 @@ class RdapObjectMapper {
         organisation.setNetworks(networks);
         organisation.setAutnums(autnums);
 
-        return mapCommons(organisation, requestUrl);
+        return mapCommons(organisation, requestUrl, List.of(organisationObject));
     }
 
     public RdapObject mapError(final int errorCode, final String errorTitle, final List<String> errorDescriptions) {
         if (Strings.isNullOrEmpty(errorTitle)) {
             throw new IllegalStateException("title is mandatory");
         }
-        final RdapObject rdapObject = mapCommons(new RdapObject(), null);
+        final RdapObject rdapObject = mapCommons(new RdapObject(), null, Collections.emptyList());
 
         rdapObject.setErrorCode(errorCode);
         rdapObject.setErrorTitle(errorTitle);
@@ -273,7 +273,7 @@ class RdapObjectMapper {
                 rdapResponse.getRemarks().add(createRemark(rpslObject.getKey(), abuseContact));
             }
 
-            rdapResponse.getEntitySearchResults().add(createEntity(abuseContact.getAbuseRole(), Role.ABUSE));
+            rdapResponse.getEntitySearchResults().add(createAbuseEntity(abuseContact.getAbuseRole()));
         }
 
         if (hasDescriptions(rpslObject)) {
@@ -288,9 +288,18 @@ class RdapObjectMapper {
         return rdapResponse;
     }
 
-    private RdapObject mapCommons(final RdapObject rdapResponse, final String requestUrl) {
+    private RdapObject mapCommons(final RdapObject rdapResponse, final String requestUrl, final List<RpslObject> rpslObjects) {
         final RdapObject rdapObject = mapCommonNoticesAndPort(rdapResponse, requestUrl);
         mapCommonLinks(rdapObject, requestUrl);
+
+        if (!rpslObjects.isEmpty()) {
+            final List<Entity> entities = Lists.newArrayList();
+            for (final RpslObject rpslObject : rpslObjects) {
+                entities.addAll(createContactEntities(rpslObject));
+            }
+            rdapObject.getEntitySearchResults().addAll(entities);
+        }
+
         return mapCommonConformances(rdapObject);
     }
 
@@ -329,7 +338,6 @@ class RdapObjectMapper {
         handleLanguageAttribute(rpslObject, ip);
         handleCountryAttribute(rpslObject, ip);
         ip.setCidr0_cidrs(getIpCidr0Notation(toIpRange(ipInterval)));
-        ip.getEntitySearchResults().addAll(createContactEntities(rpslObject));
         return ip;
     }
 
@@ -480,23 +488,20 @@ class RdapObjectMapper {
 
     private Entity createEntity(final RpslObject rpslObject) {
         // top-level entity has no role
-        return createEntity(rpslObject, null);
-    }
-
-    private Entity createEntity(final RpslObject rpslObject, @Nullable final Role role) {
         final Entity entity = new Entity();
         entity.setHandle(rpslObject.getKey().toString());
-        if (role != null) {
-            entity.getRoles().add(role);
-        }
         entity.setVCardArray(createVCard(rpslObject));
-        entity.getEntitySearchResults().addAll(createContactEntities(rpslObject));
-
         handleLanguageAttribute(rpslObject, entity);
 
         return entity;
     }
 
+    private Entity createAbuseEntity(final RpslObject rpslObject) {
+        final Entity entity = createEntity(rpslObject);
+        entity.getRoles().add(Role.ABUSE);
+
+        return entity;
+    }
     private Autnum createAutnumResponse(final RpslObject rpslObject) {
         final Autnum autnum = new Autnum();
         autnum.setHandle(rpslObject.getKey().toString());
@@ -505,7 +510,6 @@ class RdapObjectMapper {
         autnum.setStartAutnum(asNumber);
         autnum.setEndAutnum(asNumber);
         autnum.setStatus(Collections.singletonList(getResourceStatus(rpslObject).getValue()));
-        autnum.getEntitySearchResults().addAll(createContactEntities(rpslObject));
         autnum.getRdapConformance().add(RdapConformance.FLAT_MODEL.getValue());
         return autnum;
     }
@@ -521,7 +525,6 @@ class RdapObjectMapper {
         autnum.setStartAutnum(blockRange.getBegin());
         autnum.setEndAutnum(blockRange.getEnd());
         autnum.setStatus(Collections.singletonList(getResourceStatus(rpslObject).getValue()));
-        autnum.getEntitySearchResults().addAll(createContactEntities(rpslObject));
         return autnum;
     }
 
@@ -586,7 +589,6 @@ class RdapObjectMapper {
             domain.setSecureDNS(secureDNS);
         }
 
-        domain.getEntitySearchResults().addAll(createContactEntities(rpslObject));
         return domain;
     }
 
